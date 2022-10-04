@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="2882ca34-78bf-48fa-b349-aa4a735e5d01" basePath="/scripted-pipeline" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="e3f41524-bbab-4674-986d-d44b4ae3f85e" >
+		<db:oracle-connection host="${secure::db.host}" port="${secure::db.port}" user="${secure::db.user}" password="${secure::db.password}" instance="xe" />
+	</db:config>
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="e8ef97df-7722-4b97-840d-1b163ffe0749" file="enc-${env}.yaml" key="12345678password" />
+	<flow name="mule-cicd-scripted-pipeline-project1Flow" doc:id="8c0f5164-bc94-4db4-adec-0f60d923c61c" >
+		<http:listener doc:name="Listener" doc:id="b1893e59-c386-4451-93e5-03222c58841d" config-ref="HTTP_Listener_config" path="/flow1" allowedMethods="POST"/>
+		<ee:transform doc:name="Transform Message" doc:id="f48a1175-9ba2-474a-9b0a-32385a4fc22e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	id: attributes.queryParams.id
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="7f0835ab-285c-4cdd-bd57-82e2ce26465d" message="input id is --  #[payload.id]" />
+		<db:insert doc:name="Insert" doc:id="415f96a0-15b8-4e68-a7d3-ad0900fd2bbc" config-ref="Database_Config">
+			<db:sql ><![CDATA[insert into CICD_scripted_pipeline_flow1 (id) values (:id)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	id: payload.id
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="f0413657-6a8c-475f-a3a8-8c1af76de897" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	Message: payload
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
